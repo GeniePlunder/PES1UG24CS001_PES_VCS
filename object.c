@@ -137,10 +137,7 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
         free(full_obj);
         return -1;
     }
-    
-    
-    (void)type; (void)data; (void)len; (void)id_out;
-    return -1;
+
 }
 
 // Read an object from the store.
@@ -166,7 +163,44 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 // The caller is responsible for calling free(*data_out).
 // Returns 0 on success, -1 on error (file not found, corrupt, etc.).
 int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_t *len_out) {
-    // TODO: Implement
-    (void)id; (void)type_out; (void)data_out; (void)len_out;
-    return -1;
+    char path[512];
+    object_path(id, path, sizeof(path));
+
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) return -1;
+
+    struct stat st;
+    fstat(fd, &st);
+    size_t file_size = st.st_size;
+
+    uint8_t *buf = malloc(file_size);
+    read(fd, buf, file_size);
+    close(fd);
+
+    // Integrity Check
+    ObjectID actual_id;
+    compute_hash(buf, file_size, &actual_id);
+    if (memcmp(id->hash, actual_id.hash, HASH_SIZE) != 0) {
+        free(buf);
+        return -1;
+    }
+
+    // Parse header
+    char *type_str = (char *)buf;
+    size_t header_len = strlen(type_str) + 1;
+    
+    if (strncmp(type_str, "blob", 4) == 0) *type_out = OBJ_BLOB;
+    else if (strncmp(type_str, "tree", 4) == 0) *type_out = OBJ_TREE;
+    else if (strncmp(type_str, "commit", 6) == 0) *type_out = OBJ_COMMIT;
+
+    // Parse size from header (after the space)
+    char *space = strchr(type_str, ' ');
+    if (space) *len_out = atoll(space + 1);
+
+    // Extract data
+    *data_out = malloc(*len_out);
+    memcpy(*data_out, buf + header_len, *len_out);
+
+    free(buf);
+    return 0;
 }

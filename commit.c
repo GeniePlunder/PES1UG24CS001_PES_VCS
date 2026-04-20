@@ -213,5 +213,12 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     strncpy(commit.author, pes_author(), sizeof(commit.author));
     commit.timestamp = (uint64_t)time(NULL);
 
+    void *data = NULL;
+    size_t len = 0;
+    // provided helper converts the struct to the text format required by the lab
+    if (commit_serialize(&commit, &data, &len) != 0) {
+        return -1;
+    }
+
     return 0; // Placeholder for now
 }

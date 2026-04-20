@@ -195,36 +195,59 @@ int head_update(const ObjectID *new_commit) {
 // Returns 0 on success, -1 on error.
 int commit_create(const char *message, ObjectID *commit_id_out) {
     ObjectID tree_id;
-    // 1. Create a tree snapshot from the current index (Phase 2 logic)
-    if (tree_from_index(&tree_id) != 0) return -1;
+    
+    // 1. Create a tree snapshot from the current index (Phase 2)
+    if (tree_from_index(&tree_id) != 0) {
+        fprintf(stderr, "error: failed to create tree snapshot\n");
+        return -1;
+    }
 
     // 2. Prepare commit structure
     Commit commit;
     memset(&commit, 0, sizeof(Commit));
+    
+    // Set the tree root for this commit
     memcpy(commit.tree.hash, tree_id.hash, HASH_SIZE);
 
+    // 3. Set Parent linkage (Phase 4 Logic)
+    // If head_read succeeds, we have a parent; otherwise, it's the first commit.
     if (head_read(&commit.parent) == 0) {
         commit.has_parent = 1;
     } else {
         commit.has_parent = 0;
     }
     
-    // 3. Set Author and Timestamp (pes_author() is in pes.h)
+    // 4. Set Metadata (Author, Time, Message)
     strncpy(commit.author, pes_author(), sizeof(commit.author));
     commit.timestamp = (uint64_t)time(NULL);
+    
+    if (message) {
+        strncpy(commit.message, message, sizeof(commit.message) - 1);
+    } else {
+        strcpy(commit.message, "no message");
+    }
 
+    // 5. Serialize the commit struct to text format
     void *data = NULL;
     size_t len = 0;
-    // provided helper converts the struct to the text format required by the lab
     if (commit_serialize(&commit, &data, &len) != 0) {
         return -1;
     }
-if (head_update(commit_id_out) != 0) {
+
+    // 6. CRITICAL: Write the commit object to the store (Phase 1)
+    // You cannot update HEAD until the object actually exists in .pes/objects
+    if (object_write(OBJ_COMMIT, data, len, commit_id_out) != 0) {
         free(data);
         return -1;
     }
 
+    // 7. Update the branch reference (HEAD) to point to this new commit
+    if (head_update(commit_id_out) != 0) {
+        free(data);
+        return -1;
+    }
+
+    // Cleanup
     free(data);
-    return 0; // Success!
-} // Placeholder for now
+    return 0; // Mission Accomplished
 }

@@ -194,8 +194,18 @@ int head_update(const ObjectID *new_commit) {
 //
 // Returns 0 on success, -1 on error.
 int commit_create(const char *message, ObjectID *commit_id_out) {
-    // TODO: Implement commit creation
-    // (See Lab Appendix for logical steps)
-    (void)message; (void)commit_id_out;
-    return -1;
+    ObjectID tree_id;
+    // 1. Create a tree snapshot from the current index (Phase 2 logic)
+    if (tree_from_index(&tree_id) != 0) return -1;
+
+    // 2. Prepare commit structure
+    Commit commit;
+    memset(&commit, 0, sizeof(Commit));
+    memcpy(commit.tree.hash, tree_id.hash, HASH_SIZE);
+    
+    // 3. Set Author and Timestamp (pes_author() is in pes.h)
+    strncpy(commit.author, pes_author(), sizeof(commit.author));
+    commit.timestamp = (uint64_t)time(NULL);
+
+    return 0; // Placeholder for now
 }

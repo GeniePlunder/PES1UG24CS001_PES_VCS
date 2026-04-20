@@ -144,7 +144,20 @@ static int build_tree_recursive(IndexEntry *entries, int start, int end, int dep
             memcpy(te->hash.hash, entries[i].id.hash, HASH_SIZE);
             i++;
         } else {
-            i++; // Placeholder for subdirectory logic
+            size_t dir_name_len = slash - path;
+        char dir_name[256] = {0};
+        strncpy(dir_name, path, dir_name_len);
+
+        int sub_end = i;
+        while (sub_end < end) {
+            char *sub_path = entries[sub_end].path + depth;
+            if (strncmp(sub_path, dir_name, dir_name_len) == 0 && sub_path[dir_name_len] == '/') {
+                sub_end++;
+            } else {
+                break;
+            }
+        }
+        i = sub_end;     
         }
     }
     return 0;

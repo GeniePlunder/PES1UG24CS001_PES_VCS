@@ -132,6 +132,14 @@ int tree_serialize(const Tree *tree, void **data_out, size_t *len_out) {
 int tree_from_index(ObjectID *id_out) {
     // TODO: Implement recursive tree building
     // (See Lab Appendix for logical steps)
-    (void)id_out;
-    return -1;
+    Index idx;
+    if (index_load(&idx) != 0) return -1;
+
+    if (idx.count == 0) {
+        // Handle empty repo: Git doesn't commit empty trees usually, 
+        // but we'll return an error or a specific empty tree hash.
+        return -1;
+    }
+
+    return build_tree_recursive(idx.entries, 0, idx.count, 0, id_out);
 }

@@ -202,6 +202,12 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     Commit commit;
     memset(&commit, 0, sizeof(Commit));
     memcpy(commit.tree.hash, tree_id.hash, HASH_SIZE);
+
+    if (head_read(&commit.parent) == 0) {
+        commit.has_parent = 1;
+    } else {
+        commit.has_parent = 0;
+    }
     
     // 3. Set Author and Timestamp (pes_author() is in pes.h)
     strncpy(commit.author, pes_author(), sizeof(commit.author));

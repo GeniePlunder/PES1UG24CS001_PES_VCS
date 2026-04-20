@@ -118,6 +118,25 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     snprintf(dir_path, sizeof(dir_path), "%s/%.2s", OBJECTS_DIR, hex);
     mkdir(OBJECTS_DIR, 0755); 
     mkdir(dir_path, 0755);
+
+    char temp_path[512], final_path[512];
+    snprintf(temp_path, sizeof(temp_path), "%s/tmp_XXXXXX", dir_path);
+    int fd = mkstemp(temp_path);
+    if (fd < 0) {
+        free(full_obj);
+        return -1;
+    }
+
+    write(fd, full_obj, full_len);
+    fsync(fd);
+    close(fd);
+
+    object_path(id_out, final_path, sizeof(final_path));
+    if (rename(temp_path, final_path) != 0) {
+        unlink(temp_path);
+        free(full_obj);
+        return -1;
+    }
     
     
     (void)type; (void)data; (void)len; (void)id_out;

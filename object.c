@@ -137,8 +137,24 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
         free(full_obj);
         return -1;
     }
+    object_path(id_out, final_path, sizeof(final_path));
+    if (rename(temp_path, final_path) != 0) {
+        unlink(temp_path);
+        free(full_obj);
+        return -1;
+    }
 
+    // 8. Open and fsync() the shard directory to persist the rename
+    int dfd = open(dir_path, O_RDONLY);
+    if (dfd >= 0) {
+        fsync(dfd);
+        close(dfd);
+    }
+
+    free(full_obj);
+    return 0; // Success!
 }
+
 
 // Read an object from the store.
 //

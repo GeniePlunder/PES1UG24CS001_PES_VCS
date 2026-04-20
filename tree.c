@@ -154,7 +154,15 @@ static int build_tree_recursive(IndexEntry *entries, int start, int end, int dep
             if (strncmp(sub_path, dir_name, dir_name_len) == 0 && sub_path[dir_name_len] == '/') {
                 sub_end++;
             } else {
-                break;
+                ObjectID sub_tree_id;
+        if (build_tree_recursive(entries, i, sub_end, depth + dir_name_len + 1, &sub_tree_id) != 0) {
+            return -1;
+        }
+
+        TreeEntry *te = &tree.entries[tree.count++];
+        te->mode = MODE_DIR;
+        strncpy(te->name, dir_name, sizeof(te->name));
+        memcpy(te->hash.hash, sub_tree_id.hash, HASH_SIZE);
             }
         }
         i = sub_end;     
